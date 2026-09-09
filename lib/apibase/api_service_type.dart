@@ -9,12 +9,12 @@ class ApiServiceType {
   const ApiServiceType._();
 
   static final ApiService unsplashApiService = _getApiService(
+    bypassesSSLCert: true,
     options: BaseOptions(
       baseUrl: 'https://api.unsplash.com',
       headers: {
         'Accept-Version': 'v1',
-        // TODO: Add your Unsplash API key
-        'Authorization': 'NXOv8klSrItoHkuVk4fwlgtCi8EFmGHMf9u0gxNNdfI',
+        'Authorization': 'Client-ID NXOv8klSrItoHkuVk4fwlgtCi8EFmGHMf9u0gxNNdfI',
       },
     ),
   );

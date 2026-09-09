@@ -10,11 +10,13 @@ class BoxWidget extends StatelessWidget {
     required this.score,
     this.width,
     this.height,
+    this.heightInCm,
     super.key,
   });
 
   final double? width;
   final double? height;
+  final double? heightInCm;
   final String label;
   final num score;
 
@@ -22,7 +24,8 @@ class BoxWidget extends StatelessWidget {
       : label = recognition.label,
         score = recognition.score,
         width = recognition.renderLocation.width,
-        height = recognition.renderLocation.height;
+        height = recognition.renderLocation.height,
+        heightInCm = recognition.heightInCm;
 
   @override
   Widget build(BuildContext context) {
@@ -64,12 +67,18 @@ class BoxWidget extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 2),
-                  Text(
-                    score.toStringAsFixed(2),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  if (heightInCm != null) ...[
+                    const SizedBox(width: 6),
+                    Text(
+                      '(${heightInCm!.toStringAsFixed(1)} cm)',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),

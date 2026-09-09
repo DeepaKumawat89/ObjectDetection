@@ -19,6 +19,13 @@ class HomeScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Home'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.photo_library),
+            tooltip: 'Pick Image from Gallery',
+            onPressed: homeScreenStore.pickImageFromGallery,
+          ),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         heroTag: 'live_object_detection',
@@ -42,12 +49,23 @@ class HomeScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text('Something Went Wrong!'),
+                    const Text('Unable to load network photos.'),
                     const SizedBox(height: 12),
-                    FilledButton(
-                      onPressed: homeScreenStore.refresh,
-                      child: const Text('Retry'),
-                    )
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        FilledButton(
+                          onPressed: homeScreenStore.refresh,
+                          child: const Text('Retry'),
+                        ),
+                        const SizedBox(width: 12),
+                        OutlinedButton.icon(
+                          onPressed: homeScreenStore.pickImageFromGallery,
+                          icon: const Icon(Icons.photo_library),
+                          label: const Text('Pick Image'),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),

@@ -4,12 +4,14 @@ class DetectedObjectTile extends StatelessWidget {
   const DetectedObjectTile({
     required this.label,
     required this.value,
+    this.heightValue,
     this.extractedText,
     super.key,
   });
 
   final String label;
   final String value;
+  final String? heightValue;
   final String? extractedText;
 
   @override
@@ -34,13 +36,16 @@ class DetectedObjectTile extends StatelessWidget {
                   style: const TextStyle(fontWeight: FontWeight.w600),
                 ),
               ),
-              Flexible(
-                child: Text(
-                  'Score: $value',
+              if (heightValue != null)
+                Text(
+                  'Height: $heightValue',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
-              ),
             ],
           ),
           if (hasText) ...[

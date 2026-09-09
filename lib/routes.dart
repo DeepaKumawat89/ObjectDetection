@@ -30,13 +30,23 @@ class Routes {
           ),
         );
       case AppRoutes.photoAnalyzedScreen:
-        final imageBytes = settings.arguments as Uint8List?;
+        final rawArgs = settings.arguments;
+        Uint8List? imageBytes;
+        if (rawArgs is Uint8List) {
+          imageBytes = rawArgs;
+        } else if (rawArgs is List<int>) {
+          imageBytes = Uint8List.fromList(rawArgs);
+        }
 
         return getRoute(
-          widget: imageBytes?.isEmpty ?? true
-              ? const Placeholder()
+          widget: (imageBytes == null || imageBytes.isEmpty)
+              ? const Scaffold(
+                  body: Center(
+                    child: Text('Invalid image data'),
+                  ),
+                )
               : PhotoAnalyzedScreen(
-                  imageBytes: imageBytes!,
+                  imageBytes: imageBytes,
                 ),
         );
       case AppRoutes.cameraScreen:

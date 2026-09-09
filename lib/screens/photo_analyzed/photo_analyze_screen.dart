@@ -124,6 +124,8 @@ class _PhotoAnalyzedScreenState extends State<PhotoAnalyzedScreen> {
                             child: DetectedObjectTile(
                               label: detectedObject.label,
                               value: detectedObject.score.toStringAsFixed(2),
+                              heightValue:
+                                  '${detectedObject.heightInCm.toStringAsFixed(1)} cm',
                               extractedText: detectedObject.extractedText,
                             ),
                           );
@@ -167,46 +169,69 @@ class _PhotoAnalyzedScreenState extends State<PhotoAnalyzedScreen> {
     Future.delayed(
       const Duration(milliseconds: 600),
       () async {
-        final output = TensorflowService.ssdMobileNet.analyseImage(
-          widget.imageBytes,
-        );
-        image = output.imageBytes;
-        detectedObjectList = output.detectedObjects;
-        SnackBarService.remove();
-        if (mounted) {
-          setState(() {
-            isExtractingText = true;
-          });
-        }
-
-        // Run Text Recognition on individual detected objects
-        final updatedList = <DetectedObjectDm>[];
-        for (final obj in detectedObjectList) {
-          final croppedBytes = ImageUtils.cropImageRegion(
+        try {
+          final output = TensorflowService.ssdMobileNet.analyseImage(
             widget.imageBytes,
-            obj.location,
           );
-          String extractedText = '';
-          if (croppedBytes != null) {
-            extractedText = await TextRecognitionService.instance
-                .processImageBytes(croppedBytes);
-          }
-          updatedList.add(obj.copyWith(extractedText: extractedText));
-        }
-
-        // Also run Text Recognition on the full image with OCR preprocessing
-        final overallText = await TextRecognitionService.instance
-            .processImageBytes(
-              widget.imageBytes,
-              applyPreprocessing: true,
-            );
-
-        if (mounted) {
+          if (!mounted) return;
           setState(() {
-            detectedObjectList = updatedList;
-            fullImageText = overallText;
-            isExtractingText = false;
+            image = output.imageBytes;
+            detectedObjectList = output.detectedObjects;
           });
+          SnackBarService.remove();
+
+          if (mounted) {
+            setState(() {
+              isExtractingText = true;
+            });
+          }
+
+          // Run Text Recognition on individual detected objects
+          final updatedList = <DetectedObjectDm>[];
+          for (final obj in detectedObjectList) {
+            String extractedText = '';
+            try {
+              final croppedBytes = ImageUtils.cropImageRegion(
+                widget.imageBytes,
+                obj.location,
+              );
+              if (croppedBytes != null && croppedBytes.isNotEmpty) {
+                extractedText = await TextRecognitionService.instance
+                    .processImageBytes(croppedBytes);
+              }
+            } catch (e) {
+              debugPrint('Error extracting text from object: $e');
+            }
+            updatedList.add(obj.copyWith(extractedText: extractedText));
+          }
+
+          // Also run Text Recognition on the full image with OCR preprocessing
+          String overallText = '';
+          try {
+            overallText = await TextRecognitionService.instance
+                .processImageBytes(
+                  widget.imageBytes,
+                  applyPreprocessing: true,
+                );
+          } catch (e) {
+            debugPrint('Error extracting overall text: $e');
+          }
+
+          if (mounted) {
+            setState(() {
+              detectedObjectList = updatedList;
+              fullImageText = overallText;
+              isExtractingText = false;
+            });
+          }
+        } catch (e, stack) {
+          debugPrint('Error analyzing image: $e\n$stack');
+          SnackBarService.show('Failed to analyze image');
+          if (mounted) {
+            setState(() {
+              isExtractingText = false;
+            });
+          }
         }
       },
     );

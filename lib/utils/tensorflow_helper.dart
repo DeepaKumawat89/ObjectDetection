@@ -66,9 +66,11 @@ class TensorflowHelper {
     );
 
     if (classification == null) return;
+    final normalizedHeight = imageInput.height > 0 ? rect.height / imageInput.height : 0.0;
+    final heightInCm = normalizedHeight * 30.0;
     drawString(
       imageInput,
-      '$classification ${score.toStringAsFixed(2)}',
+      '$classification (${heightInCm.toStringAsFixed(1)}cm)',
       font: arial14,
       x: left + 1,
       y: top + 1,

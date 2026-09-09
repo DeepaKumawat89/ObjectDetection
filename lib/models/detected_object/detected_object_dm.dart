@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:tensorflow_demo/models/screen_params.dart';
-import 'package:tensorflow_demo/values/app_constants.dart';
 
 /// Represents the recognition output from the model
 class DetectedObjectDm {
@@ -25,6 +24,18 @@ class DetectedObjectDm {
 
   /// Recognized text within this object's region (if any)
   final String? extractedText;
+
+  /// Normalized height of the object relative to image height [0.0, 1.0]
+  double get height => location.height;
+
+  /// Height of the object box in render/screen coordinates
+  double get renderHeight => renderLocation.height;
+
+  /// Height of object in centimeters (cm) based on estimated camera frame scale (~30 cm FOV)
+  double get heightInCm => location.height * 30.0;
+
+  /// Height of the object box in image pixel coordinates given image height
+  double pixelHeight(int imgHeight) => location.height * imgHeight;
 
   DetectedObjectDm copyWith({
     String? label,

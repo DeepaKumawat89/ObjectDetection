@@ -225,20 +225,32 @@ class _LiveObjectDetectionScreenState extends State<LiveObjectDetectionScreen> {
   }
 
   Future<void> _takePicture() async {
-    final capturedImage = await _cameraController?.takePicture();
-    final decodedImage = await capturedImage?.readAsBytes();
-    NavigationService.instance
-      ..pop()
-      ..pushNamed(AppRoutes.photoAnalyzedScreen, arguments: decodedImage);
+    try {
+      final capturedImage = await _cameraController?.takePicture();
+      if (capturedImage == null) return;
+      final decodedImage = await capturedImage.readAsBytes();
+      if (decodedImage.isNotEmpty && mounted) {
+        NavigationService.instance
+          ..pop()
+          ..pushNamed(AppRoutes.photoAnalyzedScreen, arguments: decodedImage);
+      }
+    } catch (e) {
+      log('Error taking picture: $e');
+    }
   }
 
   Future<void> _pickImageFromGallery() async {
-    final result = await _imagePicker.pickImage(source: ImageSource.gallery);
-    final readAsBytesSync = await result?.readAsBytes();
-    if (readAsBytesSync != null) {
-      NavigationService.instance
-        ..pop()
-        ..pushNamed(AppRoutes.photoAnalyzedScreen, arguments: readAsBytesSync);
+    try {
+      final result = await _imagePicker.pickImage(source: ImageSource.gallery);
+      if (result == null) return;
+      final readAsBytesSync = await result.readAsBytes();
+      if (readAsBytesSync.isNotEmpty && mounted) {
+        NavigationService.instance
+          ..pop()
+          ..pushNamed(AppRoutes.photoAnalyzedScreen, arguments: readAsBytesSync);
+      }
+    } catch (e) {
+      log('Error picking image from gallery: $e');
     }
   }
 
