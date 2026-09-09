@@ -94,7 +94,7 @@ class _LiveObjectDetectionScreenState extends State<LiveObjectDetectionScreen> {
                         RoundedButton(
                           size: 48,
                           side: BorderSide.none,
-                          color: Colors.white.withOpacity(0.3),
+                          color: Colors.white.withValues(alpha: 0.3),
                           onTap: _pickImageFromGallery,
                           child: Center(
                             child: SvgPicture.asset(
@@ -117,7 +117,7 @@ class _LiveObjectDetectionScreenState extends State<LiveObjectDetectionScreen> {
                         RoundedButton(
                           size: 48,
                           side: BorderSide.none,
-                          color: Colors.white.withOpacity(0.3),
+                          color: Colors.white.withValues(alpha: 0.3),
                           onTap: _flipCamera,
                           child: Center(
                             child: SvgPicture.asset(

@@ -1,30 +1,19 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:tensorflow_demo/app.dart';
-
+import 'package:tensorflow_demo/models/detected_object/detected_object_dm.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  test('DetectedObjectDm heightInCm calculation test', () {
+    const object = DetectedObjectDm(
+      label: 'Cup',
+      score: 0.95,
+      location: Rect.fromLTRB(0.1, 0.2, 0.5, 0.7),
+    );
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    // Bounding box height normalized: 0.7 - 0.2 = 0.5
+    expect(object.height, closeTo(0.5, 0.001));
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Height in cm = 0.5 * 30.0 = 15.0 cm
+    expect(object.heightInCm, closeTo(15.0, 0.001));
   });
 }
