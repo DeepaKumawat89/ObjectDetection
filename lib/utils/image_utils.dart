@@ -1,10 +1,157 @@
+import 'dart:math';
 import 'dart:typed_data';
+import 'dart:ui';
 
 import 'package:camera/camera.dart';
 import 'package:image/image.dart';
+import 'package:tensorflow_demo/values/app_constants.dart';
 
 // ImageUtils
 class ImageUtils {
+  /// Letterboxes [image] into target dimensions maintaining aspect ratio.
+  static ({
+    Image letterboxedImage,
+    double scale,
+    int padX,
+    int padY,
+  }) letterboxImage(
+    Image image, {
+    int targetWidth = AppConstants.ssdCompatibleImageWidth,
+    int targetHeight = AppConstants.ssdCompatibleImageHeight,
+  }) {
+    final scale = min(
+      targetWidth / image.width,
+      targetHeight / image.height,
+    );
+
+    final scaledWidth = (image.width * scale).round().clamp(1, targetWidth);
+    final scaledHeight = (image.height * scale).round().clamp(1, targetHeight);
+
+    final resized = copyResize(
+      image,
+      width: scaledWidth,
+      height: scaledHeight,
+    );
+
+    final padX = (targetWidth - scaledWidth) ~/ 2;
+    final padY = (targetHeight - scaledHeight) ~/ 2;
+
+    final letterboxed = Image(
+      width: targetWidth,
+      height: targetHeight,
+    );
+    letterboxed.clear(ColorRgb8(128, 128, 128));
+
+    compositeImage(
+      letterboxed,
+      resized,
+      dstX: padX,
+      dstY: padY,
+    );
+
+    return (
+      letterboxedImage: letterboxed,
+      scale: scale,
+      padX: padX,
+      padY: padY,
+    );
+  }
+
+  /// Transforms a raw normalized bounding box ([yMin, xMin, yMax, xMax])
+  /// from letterboxed model space back to original image pixel coordinates.
+  static Rect unletterboxRect({
+    required List<num> raw,
+    required double scale,
+    required int padX,
+    required int padY,
+    required int srcWidth,
+    required int srcHeight,
+    int targetWidth = AppConstants.ssdCompatibleImageWidth,
+    int targetHeight = AppConstants.ssdCompatibleImageHeight,
+  }) {
+    final rawYMin = raw[0];
+    final rawXMin = raw[1];
+    final rawYMax = raw[2];
+    final rawXMax = raw[3];
+
+    // Model space pixel coordinates
+    final modelXMin = rawXMin * targetWidth;
+    final modelYMin = rawYMin * targetHeight;
+    final modelXMax = rawXMax * targetWidth;
+    final modelYMax = rawYMax * targetHeight;
+
+    // Remove letterbox padding and un-scale to original dimensions
+    final xMin = ((modelXMin - padX) / scale).clamp(0.0, srcWidth.toDouble());
+    final yMin = ((modelYMin - padY) / scale).clamp(0.0, srcHeight.toDouble());
+    final xMax = ((modelXMax - padX) / scale).clamp(0.0, srcWidth.toDouble());
+    final yMax = ((modelYMax - padY) / scale).clamp(0.0, srcHeight.toDouble());
+
+    return Rect.fromLTRB(xMin, yMin, xMax, yMax);
+  }
+
+  /// Crops the region specified by [boundingBox] from [imageBytes].
+  /// Supports normalized [0..1] or pixel coordinates, adds a padding margin
+  /// to prevent cutting off text at character edges, and optionally applies
+  /// grayscale/contrast preprocessing for OCR.
+  static Uint8List? cropImageRegion(
+    Uint8List imageBytes,
+    Rect boundingBox, {
+    double paddingRatio = 0.10,
+    bool preprocessForOcr = true,
+  }) {
+    var decoded = decodeImage(imageBytes);
+    if (decoded == null) return null;
+    decoded = bakeOrientation(decoded);
+
+    final isNormalized = boundingBox.left <= 1.0 &&
+        boundingBox.top <= 1.0 &&
+        boundingBox.right <= 1.0 &&
+        boundingBox.bottom <= 1.0;
+
+    final left = isNormalized ? boundingBox.left * decoded.width : boundingBox.left;
+    final top = isNormalized ? boundingBox.top * decoded.height : boundingBox.top;
+    final right = isNormalized ? boundingBox.right * decoded.width : boundingBox.right;
+    final bottom = isNormalized ? boundingBox.bottom * decoded.height : boundingBox.bottom;
+
+    final width = right - left;
+    final height = bottom - top;
+    final padX = width * paddingRatio;
+    final padY = height * paddingRatio;
+
+    final cropX = (left - padX).toInt().clamp(0, decoded.width - 1);
+    final cropY = (top - padY).toInt().clamp(0, decoded.height - 1);
+    final cropWidth = (width + 2 * padX).toInt().clamp(1, decoded.width - cropX);
+    final cropHeight = (height + 2 * padY).toInt().clamp(1, decoded.height - cropY);
+
+    var cropped = copyCrop(
+      decoded,
+      x: cropX,
+      y: cropY,
+      width: cropWidth,
+      height: cropHeight,
+    );
+
+    if (preprocessForOcr) {
+      cropped = grayscale(cropped);
+      cropped = contrast(cropped, contrast: 130);
+    }
+
+    return encodeJpg(cropped, quality: 95);
+  }
+
+  /// Preprocesses full [imageBytes] for optimal OCR recognition:
+  /// Converts to grayscale and enhances contrast.
+  static Uint8List preprocessImageForOcr(Uint8List imageBytes) {
+    var decoded = decodeImage(imageBytes);
+    if (decoded == null) return imageBytes;
+    decoded = bakeOrientation(decoded);
+
+    var processed = grayscale(decoded);
+    processed = contrast(processed, contrast: 130);
+
+    return encodeJpg(processed, quality: 95);
+  }
+
   static Image? convertCameraImageToImage(CameraImage cameraImage) {
     return switch (cameraImage.format.group) {
       ImageFormatGroup.yuv420 => _convertYUV420ToRGBImage(cameraImage),
@@ -21,7 +168,10 @@ class ImageUtils {
     final bytes = cameraImage.planes[0].bytes;
 
     // Create a new Image instance from the JPEG bytes
-    final image = decodeImage(bytes);
+    var image = decodeImage(bytes);
+    if (image != null) {
+      image = bakeOrientation(image);
+    }
 
     return image;
   }

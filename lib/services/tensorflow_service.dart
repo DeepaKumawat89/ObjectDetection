@@ -76,13 +76,14 @@ class TensorflowService {
   }
 
   AnalyseImageCallback analyseImage(Uint8List imageData) {
-    final image = decodeImage(imageData);
+    var image = decodeImage(imageData);
     if (image == null) {
       return (
         imageBytes: null,
         detectedObjects: <DetectedObjectDm>[],
       );
     }
+    image = bakeOrientation(image);
     return TensorflowHelper.analyseImage(
       image,
       interpreter: interpreter,

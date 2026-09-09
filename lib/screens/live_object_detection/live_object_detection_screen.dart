@@ -179,10 +179,15 @@ class _LiveObjectDetectionScreenState extends State<LiveObjectDetectionScreen> {
     final camera = cameras[cameraIndex];
     _cameraController = CameraController(
       camera,
-      ResolutionPreset.medium,
+      ResolutionPreset.high,
       enableAudio: false,
     );
     await _cameraController?.initialize();
+    try {
+      await _cameraController?.setFocusMode(FocusMode.auto);
+    } catch (_) {
+      // Focus mode setting may fail on devices without auto focus
+    }
   }
 
   Future<void> _initializeDetector() async {
@@ -202,9 +207,12 @@ class _LiveObjectDetectionScreenState extends State<LiveObjectDetectionScreen> {
     _cameraController?.stopImageStream();
     _cameraController = CameraController(
       cameras[newIndex],
-      ResolutionPreset.medium,
+      ResolutionPreset.high,
       enableAudio: false,
     )..initialize().then((_) async {
+        try {
+          await _cameraController?.setFocusMode(FocusMode.auto);
+        } catch (_) {}
         await _cameraController?.startImageStream(onLatestImageAvailable);
         if (mounted) setState(() {});
 

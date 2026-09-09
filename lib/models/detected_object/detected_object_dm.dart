@@ -8,6 +8,7 @@ class DetectedObjectDm {
     required this.label,
     required this.score,
     required this.location,
+    this.extractedText,
   });
 
   /// Label of the result
@@ -22,27 +23,47 @@ class DetectedObjectDm {
   /// passed for inference
   final Rect location;
 
+  /// Recognized text within this object's region (if any)
+  final String? extractedText;
+
+  DetectedObjectDm copyWith({
+    String? label,
+    num? score,
+    Rect? location,
+    String? extractedText,
+  }) {
+    return DetectedObjectDm(
+      label: label ?? this.label,
+      score: score ?? this.score,
+      location: location ?? this.location,
+      extractedText: extractedText ?? this.extractedText,
+    );
+  }
+
   /// Returns bounding box rectangle corresponding to the
   /// displayed image on screen
-  ///
-  /// This is the actual location where rectangle is rendered on
-  /// the screen
   Rect get renderLocation {
     final previewSize = ScreenParams.screenPreviewSize;
-    final double scaleX =
-        previewSize.width / AppConstants.ssdCompatibleImageWidth;
-    final double scaleY =
-        previewSize.height / AppConstants.ssdCompatibleImageHeight;
-    return Rect.fromLTWH(
-      location.left * scaleX,
-      location.top * scaleY,
-      location.width * scaleX,
-      location.height * scaleY,
+    return Rect.fromLTRB(
+      location.left * previewSize.width,
+      location.top * previewSize.height,
+      location.right * previewSize.width,
+      location.bottom * previewSize.height,
+    );
+  }
+
+  /// Returns pixel coordinates for a given source image width and height
+  Rect pixelLocation(int imgWidth, int imgHeight) {
+    return Rect.fromLTRB(
+      location.left * imgWidth,
+      location.top * imgHeight,
+      location.right * imgWidth,
+      location.bottom * imgHeight,
     );
   }
 
   @override
   String toString() {
-    return 'DetectedObjectDm(label: $label, score: $score, location: $location)';
+    return 'DetectedObjectDm(label: $label, score: $score, location: $location, extractedText: $extractedText)';
   }
 }
