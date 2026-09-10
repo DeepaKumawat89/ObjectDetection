@@ -30,7 +30,7 @@ umbrella
 ???
 handbag
 tie
-suitcase
+box
 frisbee
 skis
 snowboard
@@ -83,7 +83,7 @@ refrigerator
 ???
 book
 clock
-vase
+bottle
 scissors
 teddy bear
 hair drier

@@ -38,6 +38,15 @@ abstract class _HomeScreenStore with Store {
   @observable
   ObservableList<CreateSessionDm> photos = ObservableList();
 
+  @observable
+  bool isAnalyzingImage = false;
+
+  @observable
+  String? loadingImageUrl;
+
+  @observable
+  bool isPickerActive = false;
+
   int _currentPage = 1;
 
   final int _totalPages = 10;
@@ -46,13 +55,18 @@ abstract class _HomeScreenStore with Store {
     unawaited(getUnsplashPhotos());
     scrollController.addListener(
       () {
+        if (!scrollController.hasClients) return;
         final maxScroll = scrollController.position.maxScrollExtent;
         final currentScroll = scrollController.position.pixels;
-        if (currentScroll == maxScroll) {
+        if (currentScroll >= maxScroll - 50) {
           fetchMore();
         }
       },
     );
+  }
+
+  void dispose() {
+    scrollController.dispose();
   }
 
   Future<void> refresh() async {
@@ -69,19 +83,37 @@ abstract class _HomeScreenStore with Store {
         search: searchQuery.trim(),
       );
       _currentPage++;
+
+      final uniquePhotos = <CreateSessionDm>[];
+      final seenUrls = <String>{};
+
+      void addPhoto(CreateSessionDm photo) {
+        if (seenUrls.add(photo.urls.small)) {
+          uniquePhotos.add(photo);
+        }
+      }
+
+      addPhoto(_bottlePhoto);
+      addPhoto(_brownBoxPhoto);
+      addPhoto(_documentTextPhoto);
+      for (final p in result.results) {
+        addPhoto(p);
+      }
+
       photos
         ..clear()
-        ..add(_cupWithTextPhoto)
-        ..add(_bottlePhoto)
-        ..add(_textOnImagePhoto)
-        ..add(_documentTextPhoto)
-        ..addAll(result.results);
+        ..addAll(uniquePhotos);
       unsplashPhotosState = NetworkState.success;
     } catch (e, s) {
       log('Error getting photos from Unsplash: $e', name: 'getUnsplashPhotos()');
       log('Stacktrace: $s', name: 'getUnsplashPhotos()');
       if (photos.isEmpty) {
-        photos.addAll(_fallbackPhotos);
+        final seenUrls = <String>{};
+        for (final p in _fallbackPhotos) {
+          if (seenUrls.add(p.urls.small)) {
+            photos.add(p);
+          }
+        }
       }
       unsplashPhotosState = NetworkState.success;
     }
@@ -97,25 +129,37 @@ abstract class _HomeScreenStore with Store {
         search: searchQuery,
       );
       _currentPage++;
-      result.results
-        ..removeAt(0)
-        ..removeAt(0);
-      photos.addAll(result.results);
+      for (final p in result.results) {
+        if (!photos.any((existing) => existing.urls.small == p.urls.small)) {
+          photos.add(p);
+        }
+      }
       paginatedState = NetworkState.success;
     } catch (e, s) {
-      log('Error: $e', name: 'getUnsplashPhotos()');
-      log('Stacktrace: $s', name: 'getUnsplashPhotos()');
+      log('Error in fetchMore: $e', name: 'fetchMore()');
+      log('Stacktrace: $s', name: 'fetchMore()');
       paginatedState = NetworkState.error;
     }
   }
 
   Future<void> analyzeNetworkImage(String url) async {
+    if (isAnalyzingImage || isPickerActive) return;
+
+    isAnalyzingImage = true;
+    loadingImageUrl = url;
+
     try {
-      final response = await NetworkAssetBundle(Uri.parse(url)).load(url);
+      final uri = Uri.parse(url);
+      final response = await NetworkAssetBundle(uri)
+          .load(url)
+          .timeout(const Duration(seconds: 20));
       final bytes = response.buffer.asUint8List(
         response.offsetInBytes,
         response.lengthInBytes,
       );
+
+      if (bytes.isEmpty) return;
+
       NavigationService.instance.pushNamed(
         AppRoutes.photoAnalyzedScreen,
         arguments: bytes,
@@ -123,21 +167,29 @@ abstract class _HomeScreenStore with Store {
     } catch (e, s) {
       log('Error downloading network image: $e', name: 'analyzeNetworkImage()');
       log('Stacktrace: $s', name: 'analyzeNetworkImage()');
+    } finally {
+      isAnalyzingImage = false;
+      loadingImageUrl = null;
     }
   }
 
   Future<void> pickImageFromCamera() async {
+    if (isAnalyzingImage || isPickerActive) return;
     NavigationService.instance.pushNamed(
       AppRoutes.cameraScreen,
     );
   }
 
   Future<void> pickImageFromGallery() async {
+    if (isAnalyzingImage || isPickerActive) return;
+
+    isPickerActive = true;
     try {
       final result = await imagePicker.pickImage(
         source: ImageSource.gallery,
       );
       if (result == null) return;
+
       final bytes = await result.readAsBytes();
       if (bytes.isNotEmpty) {
         NavigationService.instance.pushNamed(
@@ -148,28 +200,30 @@ abstract class _HomeScreenStore with Store {
     } catch (e, s) {
       log('Error picking image from gallery: $e', name: 'pickImageFromGallery()');
       log('Stacktrace: $s', name: 'pickImageFromGallery()');
+    } finally {
+      isPickerActive = false;
     }
   }
 
   static const CreateSessionDm _bottlePhoto = CreateSessionDm(
-    id: 'sample_bottle_1',
-    slug: 'bottle-1',
+    id: 'sample_bottle_dGIEMeN2MV8',
+    slug: 'mizu-bottle-dGIEMeN2MV8',
     width: 1080,
     height: 720,
     color: '#000000',
     blurHash: null,
-    description: 'Bottle Sample',
+    description: 'Black Mizu Stainless Steel Tumbler Bottle',
     urls: UrlsDm(
-      raw: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600',
-      full: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600',
-      regular: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600',
-      small: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600',
-      thumb: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=600',
+      raw: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=1080',
+      full: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=1080',
+      regular: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=1080',
+      small: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=1080',
+      thumb: 'https://images.unsplash.com/photo-1602143407151-7111542de6e8?w=1080',
     ),
     links: CreateSessionLinksDm(self: '', html: '', download: '', downloadLocation: ''),
     currentUserCollections: [],
     user: UserDm(
-      id: 'bottle_user',
+      id: 'mizu_bottle_user',
       username: 'Unsplash',
       name: 'Unsplash',
       firstName: 'Unsplash',
@@ -181,25 +235,25 @@ abstract class _HomeScreenStore with Store {
     ),
   );
 
-  static const CreateSessionDm _textOnImagePhoto = CreateSessionDm(
-    id: 'sample_text_1',
-    slug: 'text-image-1',
+  static const CreateSessionDm _brownBoxPhoto = CreateSessionDm(
+    id: 'sample_brown_box_1',
+    slug: 'brown-box-bYhDEWgqYLM',
     width: 1080,
     height: 720,
-    color: '#000000',
+    color: '#f5f5f5',
     blurHash: null,
-    description: 'Large Text on Image Sample',
+    description: 'Brown Cardboard Box Sample',
     urls: UrlsDm(
-      raw: 'https://images.unsplash.com/photo-1516962215378-7fa2e137ae93?w=1080',
-      full: 'https://images.unsplash.com/photo-1516962215378-7fa2e137ae93?w=1080',
-      regular: 'https://images.unsplash.com/photo-1516962215378-7fa2e137ae93?w=1080',
-      small: 'https://images.unsplash.com/photo-1516962215378-7fa2e137ae93?w=1080',
-      thumb: 'https://images.unsplash.com/photo-1516962215378-7fa2e137ae93?w=1080',
+      raw: 'https://images.unsplash.com/photo-1595246140625-573b715d11dc?w=1080',
+      full: 'https://images.unsplash.com/photo-1595246140625-573b715d11dc?w=1080',
+      regular: 'https://images.unsplash.com/photo-1595246140625-573b715d11dc?w=1080',
+      small: 'https://images.unsplash.com/photo-1595246140625-573b715d11dc?w=1080',
+      thumb: 'https://images.unsplash.com/photo-1595246140625-573b715d11dc?w=1080',
     ),
     links: CreateSessionLinksDm(self: '', html: '', download: '', downloadLocation: ''),
     currentUserCollections: [],
     user: UserDm(
-      id: 'text_user',
+      id: 'brown_box_user',
       username: 'Unsplash',
       name: 'Unsplash',
       firstName: 'Unsplash',
@@ -241,40 +295,9 @@ abstract class _HomeScreenStore with Store {
     ),
   );
 
-  static const CreateSessionDm _cupWithTextPhoto = CreateSessionDm(
-    id: 'sample_cup_text_1',
-    slug: 'cup-text-1',
-    width: 1080,
-    height: 720,
-    color: '#000000',
-    blurHash: null,
-    description: 'Cup Object with Text and Height Sample',
-    urls: UrlsDm(
-      raw: 'https://images.unsplash.com/photo-1517256064527-09c73fc73e38?w=1080',
-      full: 'https://images.unsplash.com/photo-1517256064527-09c73fc73e38?w=1080',
-      regular: 'https://images.unsplash.com/photo-1517256064527-09c73fc73e38?w=1080',
-      small: 'https://images.unsplash.com/photo-1517256064527-09c73fc73e38?w=1080',
-      thumb: 'https://images.unsplash.com/photo-1517256064527-09c73fc73e38?w=1080',
-    ),
-    links: CreateSessionLinksDm(self: '', html: '', download: '', downloadLocation: ''),
-    currentUserCollections: [],
-    user: UserDm(
-      id: 'cup_text_user',
-      username: 'Unsplash',
-      name: 'Unsplash',
-      firstName: 'Unsplash',
-      profileImage: ProfileImageDm(small: '', medium: '', large: ''),
-      links: UserLinksDm(self: '', html: '', photos: '', likes: '', portfolio: ''),
-      totalCollections: 0,
-      totalLikes: 0,
-      totalPhotos: 0,
-    ),
-  );
-
   static final List<CreateSessionDm> _fallbackPhotos = [
-    _cupWithTextPhoto,
     _bottlePhoto,
-    _textOnImagePhoto,
+    _brownBoxPhoto,
     _documentTextPhoto,
     const CreateSessionDm(
       id: 'fallback_1',

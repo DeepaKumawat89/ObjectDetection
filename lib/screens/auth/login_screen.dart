@@ -2,7 +2,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:tensorflow_demo/services/navigation_service.dart';
 import 'package:tensorflow_demo/services/snackbar_service.dart';
+import 'package:tensorflow_demo/utils/error_handler.dart';
 import 'package:tensorflow_demo/values/app_routes.dart';
+import 'package:tensorflow_demo/widgets/app_dialog.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -26,62 +28,19 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _showErrorDialog({
-    required String title,
-    required String message,
-  }) async {
-    if (!mounted) return;
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: Text(
-            title,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-          ),
-          content: Text(
-            message,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 15,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-          actionsAlignment: MainAxisAlignment.center,
-          actions: [
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   Future<void> _login() async {
+    // Prevent duplicate triggers if already loading
+    if (_isLoading) return;
+
+    FocusScope.of(context).unfocus();
+
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
     // Validate email address before attempting login
     if (email.isEmpty) {
       _formKey.currentState?.validate();
-      SnackBarService.show('Please enter your email address.');
+      SnackBarService.showWarning('Please enter your email address.');
       return;
     }
 
@@ -90,14 +49,20 @@ class _LoginScreenState extends State<LoginScreen> {
     );
     if (!emailRegex.hasMatch(email)) {
       _formKey.currentState?.validate();
-      SnackBarService.show('Please enter a valid email address.');
+      SnackBarService.showWarning('Please enter a valid email address.');
       return;
     }
 
     // Validate password before attempting login
     if (password.isEmpty) {
       _formKey.currentState?.validate();
-      SnackBarService.show('Please enter your password.');
+      SnackBarService.showWarning('Please enter your password.');
+      return;
+    }
+
+    if (password.length < 6) {
+      _formKey.currentState?.validate();
+      SnackBarService.showWarning('Password must be at least 6 characters.');
       return;
     }
 
@@ -114,7 +79,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (mounted) {
-        SnackBarService.show('Login successful!');
+        SnackBarService.showSuccess('Login successful!');
         NavigationService.instance.pushReplacementNamed(AppRoutes.homeScreen);
       }
     } on FirebaseAuthException catch (e) {
@@ -122,23 +87,33 @@ class _LoginScreenState extends State<LoginScreen> {
           e.code == 'wrong-password' ||
           e.code == 'invalid-credential' ||
           e.code == 'invalid-email') {
-        await _showErrorDialog(
-          title: 'Incorrect Credentials',
-          message: 'Please check your email and password and try again.',
-        );
+        if (mounted) {
+          await showAppAlertDialog(
+            context: context,
+            title: 'Incorrect Credentials',
+            message:
+                'Unable to log in. Please contact the provider for assistance.',
+          );
+        }
       } else {
-        await _showErrorDialog(
+        final errorMessage = ErrorHandler.getErrorMessage(e);
+        if (mounted) {
+          await showAppAlertDialog(
+            context: context,
+            title: 'Unable to Log In',
+            message: errorMessage,
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        await showAppAlertDialog(
+          context: context,
           title: 'Unable to Log In',
           message:
               'Unable to log in. Please contact the provider for assistance.',
         );
       }
-    } catch (e) {
-      await _showErrorDialog(
-        title: 'Unable to Log In',
-        message:
-            'Unable to log in. Please contact the provider for assistance.',
-      );
     } finally {
       if (mounted) {
         setState(() {
@@ -154,7 +129,12 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            padding: EdgeInsets.fromLTRB(
+              24.0,
+              24.0,
+              24.0,
+              24.0 + MediaQuery.paddingOf(context).bottom,
+            ),
             child: Form(
               key: _formKey,
               child: Column(
@@ -188,7 +168,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 36),
                   TextFormField(
                     controller: _emailController,
+                    enabled: !_isLoading,
                     keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.next,
                     autofillHints: const [AutofillHints.email],
                     decoration: InputDecoration(
                       labelText: 'Email Address',
@@ -214,7 +196,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _passwordController,
+                    enabled: !_isLoading,
                     obscureText: _obscurePassword,
+                    textInputAction: TextInputAction.done,
+                    onFieldSubmitted: (_) => _login(),
                     decoration: InputDecoration(
                       labelText: 'Password',
                       prefixIcon: const Icon(Icons.lock_outlined),
@@ -224,11 +209,13 @@ class _LoginScreenState extends State<LoginScreen> {
                               ? Icons.visibility_off_outlined
                               : Icons.visibility_outlined,
                         ),
-                        onPressed: () {
-                          setState(() {
-                            _obscurePassword = !_obscurePassword;
-                          });
-                        },
+                        onPressed: _isLoading
+                            ? null
+                            : () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),

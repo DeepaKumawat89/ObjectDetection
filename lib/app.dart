@@ -11,7 +11,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Tensorflow Demo',
+      title: 'Object Detection',
       navigatorKey: NavigationService.instance.key,
       theme: ThemeData(
         useMaterial3: true,

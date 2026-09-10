@@ -20,8 +20,8 @@ class ImageUtils {
     int targetHeight = AppConstants.ssdCompatibleImageHeight,
   }) {
     final scale = min(
-      targetWidth / image.width,
-      targetHeight / image.height,
+      targetWidth / max(1, image.width),
+      targetHeight / max(1, image.height),
     );
 
     final scaledWidth = (image.width * scale).round().clamp(1, targetWidth);
@@ -80,11 +80,13 @@ class ImageUtils {
     final modelXMax = rawXMax * targetWidth;
     final modelYMax = rawYMax * targetHeight;
 
+    final safeScale = scale <= 0 ? 1.0 : scale;
+
     // Remove letterbox padding and un-scale to original dimensions
-    final xMin = ((modelXMin - padX) / scale).clamp(0.0, srcWidth.toDouble());
-    final yMin = ((modelYMin - padY) / scale).clamp(0.0, srcHeight.toDouble());
-    final xMax = ((modelXMax - padX) / scale).clamp(0.0, srcWidth.toDouble());
-    final yMax = ((modelYMax - padY) / scale).clamp(0.0, srcHeight.toDouble());
+    final xMin = ((modelXMin - padX) / safeScale).clamp(0.0, srcWidth.toDouble());
+    final yMin = ((modelYMin - padY) / safeScale).clamp(0.0, srcHeight.toDouble());
+    final xMax = ((modelXMax - padX) / safeScale).clamp(0.0, srcWidth.toDouble());
+    final yMax = ((modelYMax - padY) / safeScale).clamp(0.0, srcHeight.toDouble());
 
     return Rect.fromLTRB(xMin, yMin, xMax, yMax);
   }
@@ -99,9 +101,12 @@ class ImageUtils {
     double paddingRatio = 0.10,
     bool preprocessForOcr = true,
   }) {
+    if (imageBytes.isEmpty) return null;
     var decoded = decodeImage(imageBytes);
     if (decoded == null) return null;
     decoded = bakeOrientation(decoded);
+
+    if (decoded.width <= 0 || decoded.height <= 0) return null;
 
     final isNormalized = boundingBox.left <= 1.0 &&
         boundingBox.top <= 1.0 &&
@@ -113,15 +118,17 @@ class ImageUtils {
     final right = isNormalized ? boundingBox.right * decoded.width : boundingBox.right;
     final bottom = isNormalized ? boundingBox.bottom * decoded.height : boundingBox.bottom;
 
-    final width = right - left;
-    final height = bottom - top;
+    final width = max(1.0, right - left);
+    final height = max(1.0, bottom - top);
     final padX = width * paddingRatio;
     final padY = height * paddingRatio;
 
-    final cropX = (left - padX).toInt().clamp(0, decoded.width - 1);
-    final cropY = (top - padY).toInt().clamp(0, decoded.height - 1);
-    final cropWidth = (width + 2 * padX).toInt().clamp(1, decoded.width - cropX);
-    final cropHeight = (height + 2 * padY).toInt().clamp(1, decoded.height - cropY);
+    final int cropX = (left - padX).toInt().clamp(0, max(0, decoded.width - 1)).toInt();
+    final int cropY = (top - padY).toInt().clamp(0, max(0, decoded.height - 1)).toInt();
+    final int maxCropW = max(1, decoded.width - cropX);
+    final int maxCropH = max(1, decoded.height - cropY);
+    final int cropWidth = (width + 2 * padX).toInt().clamp(1, maxCropW).toInt();
+    final int cropHeight = (height + 2 * padY).toInt().clamp(1, maxCropH).toInt();
 
     var cropped = copyCrop(
       decoded,
@@ -142,6 +149,7 @@ class ImageUtils {
   /// Preprocesses full [imageBytes] for optimal OCR recognition:
   /// Converts to grayscale and enhances contrast.
   static Uint8List preprocessImageForOcr(Uint8List imageBytes) {
+    if (imageBytes.isEmpty) return imageBytes;
     var decoded = decodeImage(imageBytes);
     if (decoded == null) return imageBytes;
     decoded = bakeOrientation(decoded);
@@ -163,11 +171,10 @@ class ImageUtils {
   }
 
   static Image? _convertJPEGToImage(CameraImage cameraImage) {
-    // Extract the bytes from the CameraImage
-    // first plane is responsible for holding all the image data
+    if (cameraImage.planes.isEmpty) return null;
     final bytes = cameraImage.planes[0].bytes;
+    if (bytes.isEmpty) return null;
 
-    // Create a new Image instance from the JPEG bytes
     var image = decodeImage(bytes);
     if (image != null) {
       image = bakeOrientation(image);
@@ -176,18 +183,16 @@ class ImageUtils {
     return image;
   }
 
-  static Image _convertNV21ToRGBImage(CameraImage cameraImage) {
-    // Extract the bytes from the CameraImage
+  static Image? _convertNV21ToRGBImage(CameraImage cameraImage) {
+    if (cameraImage.planes.length < 2) return null;
     final yuvBytes = cameraImage.planes[0].bytes;
     final vuBytes = cameraImage.planes[1].bytes;
 
-    // Create a new Image instance
     final image = Image(
       width: cameraImage.width,
       height: cameraImage.height,
     );
 
-    // Convert NV21 to RGB
     _convertNV21ToRGB(
       yuvBytes,
       vuBytes,
@@ -206,35 +211,33 @@ class ImageUtils {
     int height,
     Image image,
   ) {
-    // Conversion logic from NV21 to RGB
-    // ...
-
-    // Example conversion logic using the `imageLib` package
-    // This is just a placeholder and may not be the most efficient method
     for (var y = 0; y < height; y++) {
       for (var x = 0; x < width; x++) {
         final yIndex = y * width + x;
         final uvIndex = (y ~/ 2) * (width ~/ 2) + (x ~/ 2);
 
+        if (yIndex >= yuvBytes.length || (uvIndex * 2 + 1) >= vuBytes.length) {
+          continue;
+        }
+
         final yValue = yuvBytes[yIndex];
         final uValue = vuBytes[uvIndex * 2];
         final vValue = vuBytes[uvIndex * 2 + 1];
 
-        // Convert YUV to RGB
-        final r = yValue + 1.402 * (vValue - 128);
-        final g =
-            yValue - 0.344136 * (uValue - 128) - 0.714136 * (vValue - 128);
-        final b = yValue + 1.772 * (uValue - 128);
+        final r = (yValue + 1.402 * (vValue - 128)).clamp(0, 255);
+        final g = (yValue - 0.344136 * (uValue - 128) - 0.714136 * (vValue - 128)).clamp(0, 255);
+        final b = (yValue + 1.772 * (uValue - 128)).clamp(0, 255);
 
-        // Set the RGB pixel values in the Image instance
         image.setPixelRgba(x, y, r.toInt(), g.toInt(), b.toInt(), 255);
       }
     }
   }
 
-  // Converts a [CameraImage] in BGRA888 format to [imageLib.Image] in RGB format
-  static Image _convertBGRA8888ToRGBImage(CameraImage cameraImage) {
+  static Image? _convertBGRA8888ToRGBImage(CameraImage cameraImage) {
+    if (cameraImage.planes.isEmpty) return null;
     final firstPlane = cameraImage.planes[0];
+    if (firstPlane.width == null || firstPlane.height == null) return null;
+
     return Image.fromBytes(
       width: firstPlane.width!,
       height: firstPlane.height!,
@@ -243,7 +246,8 @@ class ImageUtils {
     );
   }
 
-  static Image _convertYUV420ToRGBImage(CameraImage cameraImage) {
+  static Image? _convertYUV420ToRGBImage(CameraImage cameraImage) {
+    if (cameraImage.planes.length < 3) return null;
     final imageWidth = cameraImage.width;
     final imageHeight = cameraImage.height;
 
@@ -256,10 +260,10 @@ class ImageUtils {
     final vBuffer = vPlane.bytes;
 
     final int yRowStride = yPlane.bytesPerRow;
-    final int yPixelStride = yPlane.bytesPerPixel!;
+    final int yPixelStride = yPlane.bytesPerPixel ?? 1;
 
     final int uvRowStride = uPlane.bytesPerRow;
-    final int uvPixelStride = uPlane.bytesPerPixel!;
+    final int uvPixelStride = uPlane.bytesPerPixel ?? 1;
 
     final image = Image(width: imageWidth, height: imageHeight);
 
@@ -270,21 +274,16 @@ class ImageUtils {
         int uvw = (w / 2).floor();
 
         final yIndex = (h * yRowStride) + (w * yPixelStride);
+        final uvIndex = (uvh * uvRowStride) + (uvw * uvPixelStride);
 
-        // Y plane should have positive values belonging to [0...255]
+        if (yIndex >= yBuffer.length || uvIndex >= uBuffer.length || uvIndex >= vBuffer.length) {
+          continue;
+        }
+
         final int y = yBuffer[yIndex];
-
-        // U/V Values are subsampled i.e. each pixel in U/V chanel in a
-        // YUV_420 image act as chroma value for 4 neighbouring pixels
-        final int uvIndex = (uvh * uvRowStride) + (uvw * uvPixelStride);
-
-        // U/V values ideally fall under [-0.5, 0.5] range. To fit them into
-        // [0, 255] range they are scaled up and centered to 128.
-        // Operation below brings U/V values to [-128, 127].
         final int u = uBuffer[uvIndex];
         final int v = vBuffer[uvIndex];
 
-        // Compute RGB values per formula above.
         int r = (y + v * 1436 / 1024 - 179).round();
         int g = (y - u * 46549 / 131072 + 44 - v * 93604 / 131072 + 91).round();
         int b = (y + u * 1814 / 1024 - 227).round();

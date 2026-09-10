@@ -12,7 +12,18 @@ void main() async {
   } catch (e) {
     debugPrint('Firebase initialization error: $e');
   }
-  await TensorflowService.ssdMobileNet.initialize();
-  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
+  try {
+    await TensorflowService.ssdMobileNet.initialize();
+  } catch (e) {
+    debugPrint('Tensorflow model initialization error: $e');
+  }
+
+  try {
+    await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  } catch (e) {
+    debugPrint('Orientation configuration error: $e');
+  }
+
   runApp(const MyApp());
 }

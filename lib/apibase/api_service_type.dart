@@ -12,6 +12,9 @@ class ApiServiceType {
     bypassesSSLCert: true,
     options: BaseOptions(
       baseUrl: 'https://api.unsplash.com',
+      connectTimeout: const Duration(seconds: 15),
+      receiveTimeout: const Duration(seconds: 15),
+      sendTimeout: const Duration(seconds: 15),
       headers: {
         'Accept-Version': 'v1',
         'Authorization': 'Client-ID NXOv8klSrItoHkuVk4fwlgtCi8EFmGHMf9u0gxNNdfI',
