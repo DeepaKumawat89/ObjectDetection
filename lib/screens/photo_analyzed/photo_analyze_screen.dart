@@ -223,42 +223,38 @@ class _PhotoAnalyzedScreenState extends State<PhotoAnalyzedScreen> {
         ),
         const SizedBox(height: 16),
 
-        // Quick Stats Summary Row
+        // Remaining two metric summary cards horizontally centered
         if (detectedObjectList.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 16.0),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Expanded(
-                  child: _buildMetricCard(
-                    context,
-                    title: 'Detected',
-                    value:
-                        '${detectedObjectList.length} ${detectedObjectList.length == 1 ? 'Object' : 'Objects'}',
-                    icon: Icons.category_rounded,
-                    color: theme.colorScheme.primary,
-                  ),
-                ),
-                const SizedBox(width: 10),
-                if (topObject != null)
-                  Expanded(
+                Flexible(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 160),
                     child: _buildMetricCard(
                       context,
-                      title: 'Confidence',
-                      value: '${(topObject.score * 100).toInt()}% Match',
-                      icon: Icons.verified_rounded,
-                      color: Colors.green,
+                      title: 'Detected',
+                      value:
+                          '${detectedObjectList.length} ${detectedObjectList.length == 1 ? 'Object' : 'Objects'}',
+                      icon: Icons.category_rounded,
+                      color: theme.colorScheme.primary,
                     ),
                   ),
+                ),
                 if (topObject != null) ...[
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _buildMetricCard(
-                      context,
-                      title: 'Estimated Height',
-                      value: '${topObject.heightInCm.toStringAsFixed(1)} cm',
-                      icon: Icons.straighten_rounded,
-                      color: theme.colorScheme.secondary,
+                  const SizedBox(width: 14),
+                  Flexible(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 160),
+                      child: _buildMetricCard(
+                        context,
+                        title: 'Confidence',
+                        value: '${(topObject.score * 100).toInt()}% Match',
+                        icon: Icons.verified_rounded,
+                        color: Colors.green,
+                      ),
                     ),
                   ),
                 ],
@@ -329,6 +325,8 @@ class _PhotoAnalyzedScreenState extends State<PhotoAnalyzedScreen> {
                   value: detectedObject.score.toStringAsFixed(2),
                   heightValue:
                       '${detectedObject.heightInCm.toStringAsFixed(1)} cm',
+                  widthValue:
+                      '${detectedObject.widthInCm.toStringAsFixed(1)} cm',
                   extractedText: detectedObject.extractedText,
                 ),
               );
@@ -352,28 +350,35 @@ class _PhotoAnalyzedScreenState extends State<PhotoAnalyzedScreen> {
   }) {
     final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, size: 14, color: color),
-              const SizedBox(width: 4),
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: 6),
               Expanded(
                 child: Text(
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.bold,
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -381,13 +386,13 @@ class _PhotoAnalyzedScreenState extends State<PhotoAnalyzedScreen> {
               ),
             ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 6),
           Text(
             value,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              fontSize: 13,
+              fontSize: 14,
               fontWeight: FontWeight.bold,
               color: theme.colorScheme.onSurface,
             ),

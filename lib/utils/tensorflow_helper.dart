@@ -56,6 +56,8 @@ class TensorflowHelper {
     required num score,
     String? classification,
     Color? color,
+    double heightInCm = 0.0,
+    double widthInCm = 0.0,
   }) {
     final drawColor = color ?? ColorRgb8(255, 255, 255);
 
@@ -73,11 +75,9 @@ class TensorflowHelper {
     );
 
     if (classification == null) return;
-    final normalizedHeight = imageInput.height > 0 ? rect.height / imageInput.height : 0.0;
-    final heightInCm = normalizedHeight * 30.0;
     drawString(
       imageInput,
-      '$classification (${heightInCm.toStringAsFixed(1)} cm)',
+      '$classification (H: ${heightInCm.toStringAsFixed(1)} cm, W: ${widthInCm.toStringAsFixed(1)} cm)',
       font: arial14,
       x: left + 1,
       y: top + 1,
@@ -193,6 +193,8 @@ class TensorflowHelper {
             label: detectedObjectName,
             score: score,
             location: normalizedRect,
+            imageWidth: image.width,
+            imageHeight: image.height,
           ),
         );
       }
@@ -241,14 +243,18 @@ class TensorflowHelper {
             label: fallbackLabel,
             score: maxScore > 0.40 ? maxScore : 0.94,
             location: normalizedRect,
+            imageWidth: image.width,
+            imageHeight: image.height,
           ),
         );
       } else {
         rawDetectedObjects.add(
-          const DetectedObjectDm(
+          DetectedObjectDm(
             label: 'bottle',
             score: 0.94,
-            location: Rect.fromLTRB(0.28, 0.15, 0.72, 0.88),
+            location: const Rect.fromLTRB(0.28, 0.15, 0.72, 0.88),
+            imageWidth: image.width,
+            imageHeight: image.height,
           ),
         );
       }
@@ -273,6 +279,8 @@ class TensorflowHelper {
           imageInput: annotatedImage,
           rect: pixelRect,
           score: obj.score,
+          heightInCm: obj.heightInCm,
+          widthInCm: obj.widthInCm,
         );
       }
     }

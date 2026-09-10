@@ -6,6 +6,7 @@ class DetectedObjectTile extends StatelessWidget {
     required this.label,
     required this.value,
     this.heightValue,
+    this.widthValue,
     this.extractedText,
     super.key,
   });
@@ -13,6 +14,7 @@ class DetectedObjectTile extends StatelessWidget {
   final String label;
   final String value;
   final String? heightValue;
+  final String? widthValue;
   final String? extractedText;
 
   @override
@@ -43,6 +45,7 @@ class DetectedObjectTile extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
@@ -70,76 +73,69 @@ class DetectedObjectTile extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.verified_rounded,
+                              size: 12,
+                              color: Colors.green,
                             ),
-                            decoration: BoxDecoration(
-                              color: Colors.green.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.verified_rounded,
-                                  size: 12,
-                                  color: Colors.green,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '$scorePercent% Match',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.green[800],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (heightValue != null) ...[
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              decoration: BoxDecoration(
-                                color: theme.colorScheme.secondaryContainer
-                                    .withValues(alpha: 0.6),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.straighten_rounded,
-                                    size: 12,
-                                    color: theme.colorScheme.onSecondaryContainer,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    heightValue!,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color:
-                                          theme.colorScheme.onSecondaryContainer,
-                                    ),
-                                  ),
-                                ],
+                            const SizedBox(width: 4),
+                            Text(
+                              '$scorePercent% Match',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.green[800],
                               ),
                             ),
                           ],
-                        ],
+                        ),
                       ),
                     ],
                   ),
                 ),
+                if (heightValue != null || widthValue != null) ...[
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (heightValue != null)
+                        Text(
+                          'H: $heightValue',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                            height: 1.25,
+                          ),
+                        ),
+                      if (heightValue != null && widthValue != null)
+                        const SizedBox(height: 2),
+                      if (widthValue != null)
+                        Text(
+                          'W: $widthValue',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                            height: 1.25,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
               ],
             ),
             if (hasText) ...[
