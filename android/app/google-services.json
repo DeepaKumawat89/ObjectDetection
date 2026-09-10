@@ -1,0 +1,68 @@
+{
+  "project_info": {
+    "project_number": "29343418210",
+    "project_id": "iplteams-6eb14",
+    "storage_bucket": "iplteams-6eb14.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:29343418210:android:24f7d5eca671adc5c80e3b",
+        "android_client_info": {
+          "package_name": "com.example.ipl_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "29343418210-oncju9uek3kq6589n3s2oi3iu88usg3e.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBlqKVJgVBvp8QEdDAtLE4XIUusbHZB1tk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "29343418210-oncju9uek3kq6589n3s2oi3iu88usg3e.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:29343418210:android:d7fe21eab592f96cc80e3b",
+        "android_client_info": {
+          "package_name": "com.example.tensorflow_demo"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "29343418210-oncju9uek3kq6589n3s2oi3iu88usg3e.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBlqKVJgVBvp8QEdDAtLE4XIUusbHZB1tk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "29343418210-oncju9uek3kq6589n3s2oi3iu88usg3e.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

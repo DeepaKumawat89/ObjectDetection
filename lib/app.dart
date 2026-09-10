@@ -19,7 +19,7 @@ class MyApp extends StatelessWidget {
         appBarTheme: const AppBarTheme(scrolledUnderElevation: 0),
       ),
       debugShowCheckedModeBanner: false,
-      initialRoute: AppRoutes.homeScreen,
+      initialRoute: AppRoutes.splashScreen,
       onGenerateRoute: Routes.generateRoute,
       scaffoldMessengerKey: SnackBarService.scaffoldMessengerKey,
     );

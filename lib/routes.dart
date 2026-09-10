@@ -2,10 +2,12 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:tensorflow_demo/screens/auth/login_screen.dart';
 import 'package:tensorflow_demo/screens/home/home_screen.dart';
 import 'package:tensorflow_demo/screens/home/home_screen_store.dart';
 import 'package:tensorflow_demo/screens/live_object_detection/live_object_detection_screen.dart';
 import 'package:tensorflow_demo/screens/photo_analyzed/photo_analyze_screen.dart';
+import 'package:tensorflow_demo/screens/splash/splash_screen.dart';
 import 'package:tensorflow_demo/values/app_routes.dart';
 
 class Routes {
@@ -22,6 +24,10 @@ class Routes {
     }
 
     switch (settings.name) {
+      case AppRoutes.splashScreen:
+        return getRoute(widget: const SplashScreen());
+      case AppRoutes.loginScreen:
+        return getRoute(widget: const LoginScreen());
       case AppRoutes.homeScreen:
         return getRoute(
           widget: Provider(
